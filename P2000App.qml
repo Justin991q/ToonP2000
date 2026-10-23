@@ -26,7 +26,9 @@ App {
 	property int		fetchGeneration : 0
 	property var 		title : [];
 	property var 		description : [];
-	property string 	lastDescription :  	""
+	property var 		seenItems : ({})     // melding (place|guid) -> its time in ms: what was shown before
+	property double		newestSeen : 0       // the time of the newest melding seen, ms
+	property int		maxNotifyAgeMinutes : 15
 	property var 		pubDate : [];
 	property var 		pubDateFull : [];
 	property var 		txtcolors : [];	
@@ -110,7 +112,9 @@ App {
 		pubDate.splice(0, pubDate.length);
 		pubDateFull.splice(0, pubDateFull.length);
 		txtcolors.splice(0, txtcolors.length);
-		firststime = true
+		firststime = true      // the first fetch after this only remembers what is there
+		seenItems = {}
+		newestSeen = 0
 		console.log("P2000 saved")
 		p2000Updated()
 		console.log("P2000 getting data")
@@ -181,7 +185,9 @@ App {
 				var item = items[x]
 				var tempdescription = item.substring(item.indexOf("<description>") + "<description>".length, item.indexOf("</description>"));
 				var tempPubDate = item.substring(item.indexOf("<pubDate>") + "<pubDate>".length, item.indexOf("</pubDate>"))
-				result.push({place: location.name, description: tempdescription, date: new Date(tempPubDate)})
+				var guid = item.match(/<guid[^>]*>([^<]*)<\/guid>/)
+				result.push({place: location.name, description: tempdescription, date: new Date(tempPubDate),
+					key: location.name + "|" + (guid ? guid[1] : tempPubDate + "|" + tempdescription)})
 			}
 			onDone(result, true)
 		}
@@ -189,7 +195,21 @@ App {
 	}
 
 	function showItems(found) {
-		found.sort(function(a, b) { return b.date.getTime() - a.date.getTime() })
+		// newest first; meldingen of the same second (several units for one incident) always in the same order
+		found.sort(function(a, b) { return (b.date.getTime() - a.date.getTime()) || (a.key < b.key ? -1 : (a.key > b.key ? 1 : 0)) })
+		// a melding is new when it was not seen before, is not older than the newest one seen and is recent:
+		// a feed that failed for a minute, or a melding that dropped out of a feed, then notifies nothing
+		var now = new Date().getTime()
+		var notifyIndex = -1
+		for (var n = 0; n < found.length && n < 14; n++) {
+			var time = found[n].date.getTime()
+			if (!isNaN(time) && !seenItems[found[n].key] && time >= newestSeen && now - time <= maxNotifyAgeMinutes * 60000) {
+				notifyIndex = n
+				break
+			}
+		}
+		rememberSeen(found)
+
 		title.splice(0, title.length);
 		description.splice(0, description.length);
 		pubDate.splice(0, pubDate.length);
@@ -237,14 +257,25 @@ App {
 				pubDate.push(day + "-" + month);
 			}
 		}
-		if (description.length > 0 && lastDescription!==description[0]){ // there is a change
-			if(!isInNotificationMode & !firststime & enableNotifications){
-				createScreenNotification(pubDate[0], title[0])
-			}
+		if (notifyIndex >= 0 && !isInNotificationMode && !firststime && enableNotifications) {
+			createScreenNotification(pubDate[notifyIndex], title[notifyIndex])
 		}
 		firststime = false;
-		lastDescription=description[0]
 		p2000Updated();
+	}
+
+	function rememberSeen(found) {
+		var seen = seenItems
+		for (var i = 0; i < found.length; i++) {
+			var time = found[i].date.getTime()
+			if (isNaN(time)) continue
+			seen[found[i].key] = time
+			if (time > newestSeen) newestSeen = time
+		}
+		for (var key in seen) {
+			if (seen[key] < newestSeen - 24 * 3600000) delete seen[key]   // older than the newest: never new again
+		}
+		seenItems = seen
 	}
 	
 	

@@ -4,6 +4,7 @@
 - plaats zoeken: alarmeringen.nl stuurt de Toon naar een cookie-pagina; nu wordt de feed van de getypte plaats gebruikt
 - waarschuwingen in het log opgelost (lijsten zonder parent, tegel na verwijderen)
 - schermnotificatie via /qmf/qml/apps/p2000 (zelfde map op de Toon, nu ook in toonsim)
+- schermnotificatie alleen voor echt nieuwe meldingen (niet eerder gezien, hooguit 15 minuten oud): geen meldingen meer die al gezien of verouderd zijn als een feed even faalt, meldingen van dezelfde seconde van volgorde wisselen of een melding uit een feed verdwijnt
 
 1.0.6
 - notification added

@@ -14,7 +14,8 @@ one or more places in the Netherlands. The data comes from the RSS feeds of
   the place name in front (`Assen: Ongeval met letsel op ...`). With one place, the name is left
   out.
 - **A notification (optional):** when a new melding arrives, a light-green box with its time and text
-  appears in the middle of the screen for 10 seconds, also when the screen is dimmed.
+  appears in the middle of the screen for 10 seconds, also when the screen is dimmed. It appears once
+  per melding, only for meldingen that are at most 15 minutes old.
 
 The app checks for new meldingen every minute.
 
@@ -96,7 +97,7 @@ something while the site's search works. If the place doesn't exist, the list sa
 | "Selecteer een plaats" | No place is chosen yet: see above. |
 | "Wacht op meldingen" stays | The Toon can't reach alarmeringen.nl, or none of the places has meldingen yet. Open the feed in a browser to check: `https://alarmeringen.nl/feeds/city/<place>.rss`, for example `.../den-haag.rss`. |
 | "Plaats niet gevonden" | Check the spelling against [alarmeringen.nl/plaatsen.html](https://alarmeringen.nl/plaatsen.html). Spaces become `-` in the feed address. |
-| No notification | Is **Schermnotificatie bij nieuwe melding** on? The first check after a restart never notifies; only meldingen that arrive after it do. |
+| No notification | Is **Schermnotificatie bij nieuwe melding** on? The first check after a restart, or after saving the settings, never notifies; only meldingen that arrive after it do, and only while they are at most 15 minutes old. |
 
 ## Files and settings
 
