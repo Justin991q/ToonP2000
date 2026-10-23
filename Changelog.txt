@@ -1,0 +1,24 @@
+1.1.0
+- meerdere plaatsen (maximaal 5): de meldingen van alle plaatsen samen, nieuwste eerst
+- feeds met minder dan 14 meldingen gaven een fout
+- plaats zoeken: alarmeringen.nl stuurt de Toon naar een cookie-pagina; nu wordt de feed van de getypte plaats gebruikt
+- waarschuwingen in het log opgelost (lijsten zonder parent, tegel na verwijderen)
+- schermnotificatie via /qmf/qml/apps/p2000 (zelfde map op de Toon, nu ook in toonsim)
+
+1.0.6
+- notification added
+
+1.0.5
+- minor changes
+
+1.0.4
+- new setup because of different rss feeds
+
+1.0.2
+- reverse array when loaded first time
+
+1.0.1
+- minor changes
+
+1.0.0
+- initial release
