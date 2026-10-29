@@ -19,23 +19,33 @@ App {
 	property url 		p2000ScreenUrl : "P2000Screen.qml"
 	property			P2000ConfigScreen  p2000ConfigScreen
 	property url 		p2000ConfigScreenUrl : "P2000ConfigScreen.qml"
+	property url 		trayUrl : "P2000Tray.qml"
+	property 			SystrayIcon p2000Tray
+	property bool 		enableSystray : false      // the icon in the systray (top of the screen): an option
+	property string 	appVersion : ""            // from version.txt, shown on the settings screen
 	property string 	url : "https://www.alarmeringen.nl/feeds/all.rss"
 	property string 	woonplaats :  "xxxxxxxxxxx"   // the chosen places, ", " between them (for display)
-	property var 		locations : [];   // [{name: "Assen", url: "https://alarmeringen.nl/feeds/city/assen.rss"}, ...]
+	property var 		locations : [];   // [{name: "<plaats>", url: "https://alarmeringen.nl/feeds/city/<plaats>.rss"}, ...]
 	property int		maxLocations : 5
 	property int		fetchGeneration : 0
 	property var 		title : [];
 	property var 		description : [];
+	property var 		meldingPlace : [];   // per melding: its place, "" with one place (the tile shows it apart)
+	property var 		meldingText : [];    // per melding: the description without the place in front
 	property var 		seenItems : ({})     // melding (place|guid) -> its time in ms: what was shown before
 	property double		newestSeen : 0       // the time of the newest melding seen, ms
 	property int		maxNotifyAgeMinutes : 15
 	property var 		pubDate : [];
 	property var 		pubDateFull : [];
 	property var 		txtcolors : [];	
+	property var 		services : [];       // per melding: "brandweer", "ambulance", "traumaheli", "politie" or "" (not clear)
 	property int		scrapetime: 60000; //every minute after first fetch
 	property int		scrapetime2: 20000;  //first fetch after start
 	property bool 		firststime: true;
 	property bool 		enableNotifications: true;
+	property int		notificationSeconds: 10     // how long the notification shows
+	property int		minNotificationSeconds: 5
+	property int		maxNotificationSeconds: 60
 	
 	property bool 		isInNotificationMode: false
 	property bool 		oldanimationRunning: 	false
@@ -61,11 +71,17 @@ App {
 		source: "file:///mnt/data/tsc/p2000_userSettings.json"
 	}
 
+	FileIO {
+		id: p2000VersionFile
+		source: "file:///qmf/qml/apps/p2000/version.txt"
+	}
+
 	signal p2000Updated()	
 	
 	function init() {
 		registry.registerWidget("screen", p2000ConfigScreenUrl, this, "p2000ConfigScreen")
 		registry.registerWidget("screen", p2000ScreenUrl, this, "bitcoinScreen")
+		registry.registerWidget("systrayIcon", trayUrl, this, "p2000Tray")
 		registry.registerWidget("tile", tileUrl, this, "p2000Tile", {thumbLabel: qsTr("P2000"), thumbIcon: thumbnailIcon, thumbCategory: "general", thumbWeight: 30, baseTileWeight: 10, baseTileSolarWeight: 10, thumbIconVAlignment: "center"})
 	}
 		
@@ -87,6 +103,13 @@ App {
 			} else {
 				enableNotifications = true
 			}
+			enableSystray = (p2000SettingsJson['enableSystray'] == "Yes")
+			var seconds = parseInt(p2000SettingsJson['notificationSeconds'])
+			if (!isNaN(seconds)) notificationSeconds = Math.max(minNotificationSeconds, Math.min(maxNotificationSeconds, seconds))
+		} catch(e) {
+		}
+		try {
+			appVersion = p2000VersionFile.read().trim()
 		} catch(e) {
 		}
 		scrapetime2 = 1000;
@@ -103,12 +126,16 @@ App {
  		var p2000SettingsJson = {
 			"url" : url,
 			"enableNotifications" : tmpNotifications,
+			"notificationSeconds" : notificationSeconds,
+			"enableSystray" : enableSystray ? "Yes" : "No",
 			"woonplaats" : woonplaats,
 			"locations" : locations
 		}
   		p2000SettingsFile.write(JSON.stringify(p2000SettingsJson))
 		title.splice(0, title.length);
 		description.splice(0, description.length);
+		meldingPlace.splice(0, meldingPlace.length);
+		meldingText.splice(0, meldingText.length);
 		pubDate.splice(0, pubDate.length);
 		pubDateFull.splice(0, pubDateFull.length);
 		txtcolors.splice(0, txtcolors.length);
@@ -120,6 +147,13 @@ App {
 		console.log("P2000 getting data")
 		getP2000Data()
 		
+	}
+
+	function testScreenNotification(seconds) {
+		if (isInNotificationMode) return
+		var now = new Date()
+		var time = ("0" + now.getHours()).slice(-2) + ":" + ("0" + now.getMinutes()).slice(-2)
+		createScreenNotification(time, "Testmelding: zo ziet een nieuwe melding eruit", seconds)
 	}
 
 	function setLocations(list) {
@@ -185,8 +219,9 @@ App {
 				var item = items[x]
 				var tempdescription = item.substring(item.indexOf("<description>") + "<description>".length, item.indexOf("</description>"));
 				var tempPubDate = item.substring(item.indexOf("<pubDate>") + "<pubDate>".length, item.indexOf("</pubDate>"))
+				var rssTitle = item.match(/<title>([^<]*)<\/title>/)
 				var guid = item.match(/<guid[^>]*>([^<]*)<\/guid>/)
-				result.push({place: location.name, description: tempdescription, date: new Date(tempPubDate),
+				result.push({place: location.name, description: tempdescription, rssTitle: rssTitle ? rssTitle[1] : "", date: new Date(tempPubDate),
 					key: location.name + "|" + (guid ? guid[1] : tempPubDate + "|" + tempdescription)})
 			}
 			onDone(result, true)
@@ -212,32 +247,39 @@ App {
 
 		title.splice(0, title.length);
 		description.splice(0, description.length);
+		meldingPlace.splice(0, meldingPlace.length);
+		meldingText.splice(0, meldingText.length);
 		pubDate.splice(0, pubDate.length);
 		pubDateFull.splice(0, pubDateFull.length);
 		txtcolors.splice(0, txtcolors.length);
+		services.splice(0, services.length);
 
 		var severalPlaces = locations.length > 1
 		for (var x = 0; x < found.length && x < 14; x++) {
-			var tempdescription = found[x].description
-			var tempTitle = tempdescription;
 			var place = found[x].place
+			var tempdescription = withoutPlaceAsStreet(found[x].description, place, found[x].rssTitle)
+			var tempTitle = tempdescription;
 
+			var service = serviceOf(found[x].rssTitle, tempdescription)
 			var lineColor = "black";
-			if(tempTitle.toLowerCase().indexOf("ambu")>-1 || tempdescription.toLowerCase().indexOf("ambu")>-1){lineColor = "black";}
-			if(tempTitle.toLowerCase().indexOf("politie")>-1 || tempdescription.toLowerCase().indexOf("politie")>-1){lineColor = "blue";}
-			if(tempTitle.toLowerCase().indexOf("brandweer ")>-1 || tempdescription.toLowerCase().indexOf("brandweer")>-1){lineColor = "red";}
+			if (service === "politie") lineColor = "blue";
+			if (service === "brandweer") lineColor = "red";
 
 			tempdescription = replaceString(tempdescription, "Ambulance ", "Ambu ");
 			tempdescription = replaceString(tempdescription, "Brandweer ", "Brw ");
 			tempdescription = replaceString(tempdescription, "Politie ", "Pol ");
+			tempdescription = replaceString(tempdescription, "met gepaste spoed", "gepaste spoed");
 			tempdescription = replaceString(tempdescription, "met spoed", "spoed");
 			tempdescription = replaceString(tempdescription, " in " + place , "");
 			tempdescription = replaceString(tempdescription, " " + place, " ");
+			meldingPlace.push(severalPlaces ? place : "");
+			meldingText.push(tempdescription);
 			if (severalPlaces) tempdescription = place + ": " + tempdescription   // which place it was
 
 			if (debugOutput) console.log("*********P2000: " + tempdescription);
 
 			txtcolors.push(lineColor);
+			services.push(service);
 			title.push(severalPlaces ? place + ": " + tempTitle : tempTitle);
 			description.push(tempdescription);
 
@@ -262,6 +304,39 @@ App {
 		}
 		firststime = false;
 		p2000Updated();
+	}
+
+	function withoutPlaceAsStreet(description, place, rssTitle) {
+		// on a motorway the feed has the place as street ("Ongeval op <plaats> in <plaats>"); taking the
+		// place out then left "Ongeval op": use the road from the title ("... a28 re 127,1 <plaats>")
+		var name = place.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+		var asStreet = new RegExp(" (op|naar|bij) " + name + "(?= in " + name + "$)", "i")
+		if (!asStreet.test(description)) return description
+		var t = rssTitle.toLowerCase()
+		var road = t.match(/\s([an]\d{1,3})\s+(re|li)\s+(\d{1,3}(?:,\d)?)(?=\s|$)/)
+		var where = road ? road[1].toUpperCase() + " " + road[2] + " " + road[3] : ""
+		if (!where) {
+			road = t.match(/\s([an]\d{1,3})(?=\s|$)/)   // not the first word: an ambulance's "a1" is its urgency
+			if (road) where = road[1].toUpperCase()
+		}
+		return description.replace(asStreet, where ? " $1 " + where : "")
+	}
+
+	function serviceOf(rssTitle, description) {
+		// the feed does not say which service it is: the form of its title, then the words of the melding.
+		// The title first: the feed's text can be wrong ("p 1 achtervolging ..." as "Brandweer met spoed naar ...")
+		var d = description.toLowerCase()
+		var t = rssTitle.toLowerCase().replace(/^oefening\s+/, "")   // an exercise: "oefening p 1 bnn-09 ..."
+		if (/(^|\s)brw(\s|$)/.test(t) || /^p\s*[1-3]\s+[a-z]{2,4}-\d{2}\b/.test(t)) return "brandweer"   // "p 1 bnn-01 ...": with a region
+		if (/^a\s*0\s/.test(t) || d.indexOf("traumaheli") > -1 || /(^|\s)(lifeliner|mmt)/.test(t)) return "traumaheli"   // "a0 ..."
+		if (/^[ab]\s*[12]\s/.test(t)) return "ambulance"                                                 // "a1 ...", "b2 ..."
+		if (/^p\s*[1-3]\s/.test(t)) return "politie"                                                      // "p 1 ongeval wegvervoer letsel ...": no region
+		if (/(^|\s)prio\s*[1-3](\s|$)/.test(t) || /(^|\s)icnum(\s|$)/.test(t)) return "politie"        // "ongeval/wegvervoer/letsel prio 1 ...", "... icnum 639851"
+		if (t.indexOf("politie") > -1) return "politie"
+		if (d.indexOf("brandweer") > -1) return "brandweer"
+		if (d.indexOf("politie") > -1) return "politie"
+		if (d.indexOf("ambu") > -1) return "ambulance"
+		return ""
 	}
 
 	function rememberSeen(found) {
@@ -290,8 +365,9 @@ App {
 		}
 	}		
 
-	function createScreenNotification(eventTime, eventDescription){
+	function createScreenNotification(eventTime, eventDescription, seconds){
 		isInNotificationMode = true
+		notificationTimer.interval = (seconds ? seconds : notificationSeconds) * 1000   // seconds: for the test, the unsaved duration
 		oldanimationRunning = animationscreen.animationRunning
 		oldisVisibleinDimState = animationscreen.isVisibleinDimState
 		oldanimationInterval = animationscreen.animationInterval
@@ -346,7 +422,7 @@ App {
 
 	Timer {
 		id: notificationTimer   //delay to hide the notification
-		interval: 10000
+		interval: notificationSeconds * 1000
 		repeat: false
 		running: false
 		triggeredOnStart: false

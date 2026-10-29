@@ -15,6 +15,8 @@ Screen {
 	property string tempUrl : app.url
 	
 	property bool tempNotifications : app.enableNotifications
+	property int tempNotificationSeconds : app.notificationSeconds
+	property bool tempSystray : app.enableSystray
 	property var tempLocations : []
 	property bool firstShown: true  // closing the keyboard shows the screen again: keep the unsaved list
 	property string searchStatus: ""
@@ -26,6 +28,9 @@ Screen {
 			tempLocations = app.locations.slice(0)
 			tempNotifications = app.enableNotifications
 			notificationModeToggle.isSwitchedOn = tempNotifications;
+			tempNotificationSeconds = app.notificationSeconds
+			tempSystray = app.enableSystray
+			systrayToggle.isSwitchedOn = tempSystray
 			var last = tempLocations.length > 0 ? tempLocations[tempLocations.length - 1].name : ""
 			woonplaatsEdit.inputText = last
 			getPlaces2(last)
@@ -36,6 +41,8 @@ Screen {
 	onCustomButtonClicked: {
 		app.setLocations(tempLocations)
 		app.enableNotifications = tempNotifications
+		app.notificationSeconds = tempNotificationSeconds
+		app.enableSystray = tempSystray
 		app.saveSettings()
 		firstShown = true
 		hide()
@@ -159,7 +166,106 @@ Screen {
 		}
 	}
 
+	Text {
+		id: durationText
+		text: "Weergaveduur notificatie: "
+		font.pixelSize:  isNxt ? 18:14
+		font.family: qfont.semiBold.name
+		anchors {
+			left: notificationMode.left
+			verticalCenter: durationRow.verticalCenter
+		}
+	}
+
+	Row {
+		id: durationRow
+		spacing: isNxt ? 12 : 10
+		anchors {
+			left: durationText.right
+			top: notificationModeToggle.bottom
+			topMargin: isNxt ? 10 : 8
+		}
+
+		NewTextLabel {
+			width: isNxt ? 40 : 32
+			height: isNxt ? 32 : 26
+			buttonActiveColor: "lightgrey"
+			buttonHoverColor: "blue"
+			enabled : true
+			textColor : "black"
+			buttonText: "-"
+			onClicked: tempNotificationSeconds = Math.max(app.minNotificationSeconds, tempNotificationSeconds - 5)
+		}
+
+		Text {
+			anchors.verticalCenter: parent.verticalCenter
+			width: isNxt ? 70 : 56
+			horizontalAlignment: Text.AlignHCenter
+			text: tempNotificationSeconds + " sec"
+			font.family: qfont.semiBold.name
+			font.pixelSize: isNxt ? 18:14
+		}
+
+		NewTextLabel {
+			width: isNxt ? 40 : 32
+			height: isNxt ? 32 : 26
+			buttonActiveColor: "lightgrey"
+			buttonHoverColor: "blue"
+			enabled : true
+			textColor : "black"
+			buttonText: "+"
+			onClicked: tempNotificationSeconds = Math.min(app.maxNotificationSeconds, tempNotificationSeconds + 5)
+		}
+
+		NewTextLabel {
+			width: isNxt ? 80 : 64
+			height: isNxt ? 32 : 26
+			buttonActiveColor: "lightgreen"
+			buttonHoverColor: "blue"
+			enabled : true
+			textColor : "black"
+			buttonText: "Test"
+			onClicked: app.testScreenNotification(tempNotificationSeconds)
+		}
+	}
 	
+	Text {
+		id: systrayText
+		text: "Icoon in systray: "
+		font.pixelSize:  isNxt ? 18:14
+		font.family: qfont.semiBold.name
+		anchors {
+			left: notificationMode.left
+			verticalCenter: systrayToggle.verticalCenter
+		}
+	}
+
+	OnOffToggle {
+		id: systrayToggle
+		height:  30
+		anchors {
+			left: systrayText.right
+			top: durationRow.bottom
+			topMargin: isNxt ? 10 : 8
+			leftMargin: isNxt ? 18:14
+		}
+		leftIsSwitchedOn: false
+		onSelectedChangedByUser: tempSystray = isSwitchedOn
+	}
+
+	Text {
+		id: versionText
+		text: app.appVersion ? "Versie " + app.appVersion : ""
+		font.pixelSize: isNxt ? 15:12
+		font.family: qfont.regular.name
+		color: "grey"
+		anchors {
+			left: instelText.left
+			bottom: parent.bottom
+			bottomMargin: isNxt ? 12:10
+		}
+	}
+
 	Rectangle{
         id: listviewContainer1
         width: isNxt ? 400 : 320
@@ -280,7 +386,8 @@ Screen {
 		font.family: qfont.semiBold.name
 		font.pixelSize: isNxt ? 18:14
 		anchors {
-			top: listviewContainer1.top
+			top: systrayToggle.bottom
+			topMargin: isNxt ? 16 : 12
 			left: notificationMode.left
 		}
 	}
@@ -392,7 +499,7 @@ Screen {
     }
 
 	function getPlaceFromFeed(plaats) {
-		// the feed's address is the place name in lower case with '-' (Den Haag: den-haag); its channel
+		// the feed's address is the place name in lower case with '-' (two words: two-words); its channel
 		// description has the name as alarmeringen.nl writes it
 		var slug = plaats.toLowerCase().replace(/^'/, "").replace(/[^a-z0-9à-ÿ]+/g, "-").replace(/^-+|-+$/g, "")
 		if (!slug) return;

@@ -27,7 +27,7 @@ Screen {
 			timeModel.clear()
 			for (var i in app.description) {			    
 				var shortDescription = app.description[i].substring(0, 55);
-				statusModel.append({status: shortDescription, txtcolor: app.txtcolors[i]});
+				statusModel.append({status: shortDescription, txtcolor: app.txtcolors[i], service: app.services[i] || ""});
 				timeModel.append({time: app.pubDateFull[i], txtcolor: app.txtcolors[i]});
 			}
 		}
@@ -114,13 +114,21 @@ Screen {
     GridView {
         id: statusListView
         model: statusModel
-        delegate: Text {
-                id: mytext2
-                text: status
-                color: dimState? "white" : "grey" 
-                font {
-                    family: qfont.semiBold.name
-                    pixelSize:  isNxt? 25:20
+        delegate: Row {
+                spacing: isNxt? 10:8
+                ServiceIcon {
+                    anchors.verticalCenter: parent.verticalCenter
+                    service: model.service
+                    dimState: screenStateController.dimmedColors
+                }
+                Text {
+                    id: mytext2
+                    text: status
+                    color: dimState? "white" : "grey" 
+                    font {
+                        family: qfont.semiBold.name
+                        pixelSize:  isNxt? 25:20
+                    }
                 }
             }
         flow: GridView.BottomToTop

@@ -21,23 +21,15 @@ Tile {
 		
     function updateP2000List() {
         if (app.description.length>0){waiting=false}else{waiting=true}
-        if (app.description[0]){
-		    var shortDescription0 = app.description[0].substring(0, 55);
-            eventText0.text= shortDescription0
-            timeText0.text = app.pubDate[0]
+        meldingModel.clear()
+        for (var i = 0; i < app.description.length && i < 3; i++) {
+            meldingModel.append({time: app.pubDate[i], service: app.services[i] || "",
+                                 place: app.meldingPlace[i] || "", text: app.meldingText[i] || ""})
         }
-        if (app.description[1]){
-		    var shortDescription1 = app.description[1].substring(0, 55);
-            eventText1.text= shortDescription1
-            timeText1.text=  app.pubDate[1]
-        }
-        if (app.description[2]){
-		    var shortDescription2 = app.description[2].substring(0, 55);
-            eventText2.text= shortDescription2
-            timeText2.text=  app.pubDate[2]
-        }
-		
-		
+    }
+
+    ListModel {
+        id: meldingModel
     }
 
     Text{
@@ -82,9 +74,7 @@ Tile {
 
 	Text{
 		id: wpText
-		text: "P2000 - " + app.woonplaats
-		wrapMode: Text.WordWrap
-		width : isNxt? parent.width - 24 : parent.width - 18
+		text: "P2000"
 		font.pixelSize: isNxt? 16:12
 		font.family:  qfont.bold.name
 		anchors {
@@ -96,27 +86,65 @@ Tile {
 		color : dimState?  dimmableColors.clockTileColor : colors.clockTileColor
 		visible: (!setupText.visible && !waitText.visible)
 	}
-	
 
-    Grid {
-		id: gridContainer1
-		columns: 2
-		spacing: isNxt? 7:5
-		rowSpacing: 2
-		height : isNxt? parent.height  - 100: parent.height  - 16
-		width :   parent.width
+	// per melding: time, service, place (grey) and text; what does not fit ends in "..."
+	Column {
+		id: meldingList
+		spacing: isNxt? 6:5
+		width: parent.width - 2 * anchors.leftMargin
 		anchors {
 			top: wpText.bottom
 			left: parent.left
 			leftMargin:  isNxt? 12:9
 			topMargin: isNxt? 6:5
 		}
-		Text {id: timeText0;width:40; font.pixelSize: isNxt? 16:12;font.family: qfont.regular.name; color: dimState?  "white" : "black"}
-		Text {id: eventText0;wrapMode: Text.WordWrap;width:parent.width - 57;font.pixelSize: isNxt? 16:12;font.family: qfont.regular.name;color: dimState?  "white" : "black"}
-		Text {id: timeText1;width: 40;font.pixelSize: isNxt? 16:12;font.family:  qfont.regular.name; color: dimState?  "white" : "black"}
-		Text {id: eventText1; wrapMode: Text.WordWrap;width:parent.width - 57;font.pixelSize: isNxt? 16:12;font.family: qfont.regular.name;color: dimState?  "white" : "black"}
-		Text {id: timeText2;width:40; font.pixelSize: isNxt? 16:12;font.family: qfont.regular.name; color: dimState?  "white" : "black"}
-		Text {id: eventText2; wrapMode: Text.WordWrap;width:parent.width - 57;font.pixelSize: isNxt? 16:12;font.family: qfont.regular.name;color: dimState?  "white" : "black"}
- }
+		visible: wpText.visible
+
+		Repeater {
+			model: meldingModel
+
+			// several places: the place on the first line, the melding below it over the full width
+			Row {
+				id: meldingRow
+				width: meldingList.width
+				spacing: isNxt? 7:5
+
+				Text {
+					id: timeText
+					width: isNxt? 44:35
+					text: model.time
+					font.pixelSize: isNxt? 16:12
+					font.family: qfont.regular.name
+					color: dimState? "white" : "black"
+				}
+				ServiceIcon {
+					id: icon
+					y: (timeText.height - height) / 2
+					service: model.service
+					dimState: p2000Tile.dimState
+				}
+				Column {
+					width: meldingRow.width - timeText.width - icon.width - 2 * meldingRow.spacing
+
+					Text {
+						width: parent.width
+						visible: model.place !== ""
+						elide: Text.ElideRight
+						text: model.place
+						font.pixelSize: isNxt? 16:12
+						font.family: qfont.regular.name
+						color: dimState? "#bbbbbb" : "#808080"
+					}
+					Text {
+						width: parent.width
+						elide: Text.ElideRight
+						text: model.text
+						font.pixelSize: isNxt? 16:12
+						font.family: qfont.regular.name
+						color: dimState? "white" : "black"
+					}
+				}
+			}
+		}
+	}
 }
-	

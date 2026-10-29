@@ -1,3 +1,13 @@
+2.0.0
+- weergaveduur van de schermnotificatie instelbaar (5 tot 60 seconden, standaard 10)
+- knop Test in de instellingen: toont een testmelding met de ingestelde weergaveduur
+- icoontje per melding op tegel en scherm: B (brandweer), A (ambulance), H (traumaheli), P (politie), grijs als het niet duidelijk is; de dienst volgt uit de vorm van de P2000-tekst (politie: "p 1 ..." zonder regiocode, "prio 1", "icnum"; traumaheli: "a0")
+- meldingen op de snelweg: "Ongeval op A28 re 127,1" in plaats van alleen "Ongeval op" (de feed geeft de plaats als straat)
+- rustigere tegel: kop alleen "P2000"; bij meerdere plaatsen de plaatsnaam in grijs met de melding eronder; te lange tekst eindigt op "…"
+- "met gepaste spoed" wordt "gepaste spoed"
+- optie: icoon (zwaailicht) in de systray; tik erop voor het scherm met alle meldingen (standaard uit)
+- versienummer op de instellingenpagina
+
 1.1.0
 - meerdere plaatsen (maximaal 5): de meldingen van alle plaatsen samen, nieuwste eerst
 - feeds met minder dan 14 meldingen gaven een fout
@@ -5,6 +15,8 @@
 - waarschuwingen in het log opgelost (lijsten zonder parent, tegel na verwijderen)
 - schermnotificatie via /qmf/qml/apps/p2000 (zelfde map op de Toon, nu ook in toonsim)
 - schermnotificatie alleen voor echt nieuwe meldingen (niet eerder gezien, hooguit 15 minuten oud): geen meldingen meer die al gezien of verouderd zijn als een feed even faalt, meldingen van dezelfde seconde van volgorde wisselen of een melding uit een feed verdwijnt
+
+--- Below are versions from: https://github.com/oepi-loepi/p2000 ---
 
 1.0.6
 - notification added

@@ -87,7 +87,7 @@ Item {
     }
 	
 	Timer {
-		interval: 2500
+		interval: 500   //close soon after the app ends the notification
 		running: true
 		repeat: true
 		onTriggered: {
