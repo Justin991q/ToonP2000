@@ -1,3 +1,6 @@
+2.0.1
+- scherm met alle meldingen: tijd, icoontje en melding staan in één lijst die niet meer verschuift; ze schoven over elkaar heen als je de lijst opzij sleepte. Te lange meldingen eindigen op "…"
+
 2.0.0
 - weergaveduur van de schermnotificatie instelbaar (5 tot 60 seconden, standaard 10)
 - knop Test in de instellingen: toont een testmelding met de ingestelde weergaveduur

@@ -22,24 +22,18 @@ Screen {
 	
 	function updateP2000List() {
 		if (app.description.length>0){waiting=false}else{waiting=true}
-		if ((statusModel)) {
-			statusModel.clear()
-			timeModel.clear()
-			for (var i in app.description) {			    
-				var shortDescription = app.description[i].substring(0, 55);
-				statusModel.append({status: shortDescription, txtcolor: app.txtcolors[i], service: app.services[i] || ""});
-				timeModel.append({time: app.pubDateFull[i], txtcolor: app.txtcolors[i]});
+		if ((meldingModel)) {
+			meldingModel.clear()
+			for (var i in app.description) {
+				meldingModel.append({time: app.pubDateFull[i], txtcolor: app.txtcolors[i], service: app.services[i] || "",
+				                     status: app.description[i]});
 			}
 		}
 	}
-	
-	ListModel {
-        id: timeModel
-    }
 
-    ListModel {
-        id: statusModel
-    }
+	ListModel {
+		id: meldingModel
+	}
 
 	Text{
 		id: woonplaatsText
@@ -84,68 +78,56 @@ Screen {
 	}
 
 
-    GridView {
-        id: timeListView
-        model: timeModel
-        delegate: Text {
-                id: mytext1
-                text: time
-                color: txtcolor
-                font {
-                    family: qfont.semiBold.name
-                    pixelSize:  isNxt? 25:20
-                }
-            }
-        flow: GridView.BottomToTop
-        cellWidth: isNxt?  parent.width-20:  parent.width-16
-        cellHeight: isNxt? 30:24
-        height : parent.height
-        width :  isNxt? 140:110
-        anchors {
-            top: woonplaatsText.bottom
-            left: parent.left
-            leftMargin:  isNxt? 50:40
-            topMargin: isNxt? 20:16
-        }
-        visible: (!setupText.visible && !waitText.visible)
-    }
+	// one list, one row per melding (time, service, text), that does not scroll: the 14 meldingen fit,
+	// and time and text can no longer slide apart
+	ListView {
+		id: meldingListView
+		model: meldingModel
+		interactive: false
+		height: count * (isNxt? 30:24)
+		anchors {
+			top: woonplaatsText.bottom
+			left: parent.left
+			right: parent.right
+			leftMargin:  isNxt? 50:40
+			rightMargin: isNxt? 20:16
+			topMargin: isNxt? 20:16
+		}
+		visible: (!setupText.visible && !waitText.visible)
 
+		delegate: Row {
+			width: meldingListView.width
+			height: isNxt? 30:24
+			spacing: isNxt? 10:8
 
-    GridView {
-        id: statusListView
-        model: statusModel
-        delegate: Row {
-                spacing: isNxt? 10:8
-                ServiceIcon {
-                    anchors.verticalCenter: parent.verticalCenter
-                    service: model.service
-                    dimState: screenStateController.dimmedColors
-                }
-                Text {
-                    id: mytext2
-                    text: status
-                    color: dimState? "white" : "grey" 
-                    font {
-                        family: qfont.semiBold.name
-                        pixelSize:  isNxt? 25:20
-                    }
-                }
-            }
-        flow: GridView.BottomToTop
-        cellWidth: isNxt?  parent.width-20:  parent.width-16
-        cellHeight: isNxt? 30:24
-        height : parent.height
-        width :  isNxt? parent.width-170:parent.width-135
-        anchors {
-            top: timeListView.top
-            left: timeListView.right
-            leftMargin:  isNxt? 25:20
-        }
-       visible: (!setupText.visible && !waitText.visible)
-    }	
-	
+			Text {
+				id: timeText
+				width: isNxt? 155:122
+				anchors.verticalCenter: parent.verticalCenter
+				text: model.time
+				color: model.txtcolor
+				font {
+					family: qfont.semiBold.name
+					pixelSize:  isNxt? 25:20
+				}
+			}
+			ServiceIcon {
+				id: icon
+				anchors.verticalCenter: parent.verticalCenter
+				service: model.service
+				dimState: screenStateController.dimmedColors
+			}
+			Text {
+				anchors.verticalCenter: parent.verticalCenter
+				width: parent.width - timeText.width - icon.width - 2 * parent.spacing
+				elide: Text.ElideRight
+				text: model.status
+				color: dimState? "white" : "grey"
+				font {
+					family: qfont.semiBold.name
+					pixelSize:  isNxt? 25:20
+				}
+			}
+		}
+	}
 }
-
-
-
-
